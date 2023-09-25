@@ -41,12 +41,24 @@
       (a: ITask, b: ITask) => +new Date(b.created_on) - +new Date(a.created_on)
     );
 
-  // onMount(() => {
-  //   handleEmpty();
-  // });
+  $: completedList = taskList
+    .filter((task) => task.is_done === true && task.is_deleted === false)
+    .sort(
+      (a: ITask, b: ITask) => +new Date(b.created_on) - +new Date(a.created_on)
+    );
+
+  onMount(() => {
+    const store: ITask[] | null = JSON.parse(
+      (localStorage.getItem("svelte-app") as any) || null
+    );
+
+    if (store !== null) {
+      taskList = [...store];
+    }
+  });
 
   // afterUpdate(() => {
-  //   console.log(todoList);
+  //   console.log('did update')
   // });
 
   const handleSubmit: () => void = () => {
@@ -61,6 +73,8 @@
     taskList.push(newTask);
 
     taskList = taskList;
+
+    localStorage.setItem("svelte-app", JSON.stringify(taskList));
 
     task = "";
   };
@@ -95,6 +109,8 @@
 
     taskList = updatedSelected;
 
+    localStorage.setItem("svelte-app", JSON.stringify(updatedSelected));
+
     selected = defaultTask;
   };
 
@@ -110,7 +126,26 @@
       }
     });
 
+    localStorage.setItem("svelte-app", JSON.stringify(setDone));
+
     taskList = setDone;
+  };
+
+  const handleDelete: (id: string) => void = (id) => {
+    const updateWithDeleted = taskList.map((task) => {
+      if (task.id === id) {
+        return {
+          ...task,
+          is_deleted: true,
+        };
+      } else {
+        return task;
+      }
+    });
+
+    localStorage.setItem("svelte-app", JSON.stringify(updateWithDeleted));
+
+    taskList = updateWithDeleted;
   };
 </script>
 
@@ -124,7 +159,7 @@
       <form class="flex gap-4" on:submit={handleSubmit}>
         <input
           type="text"
-          class="py-2 px-3 block w-full border-gray-200 rounded-md text-base focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400"
+          class="py-2 px-3 block w-full border-gray-200 rounded-md text-base focus:border-blue-500 focus:ring-blue-500"
           placeholder="Add your todo list"
           bind:value={task}
         />
@@ -157,7 +192,7 @@
                 <input
                   type="text"
                   placeholder="Add your todo list"
-                  class="py-2 px-3 block w-full rounded-md text-base focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 {selected.id ===
+                  class="py-2 px-3 block w-full rounded-md text-base focus:border-blue-500 focus:ring-blue-500 {selected.id ===
                   id
                     ? 'border-gray-200'
                     : 'border-transparent pointer-events-none'}"
@@ -209,15 +244,36 @@
       <h2 class="text-xl font-semibold">Completed task</h2>
 
       <div>
-        <!-- empty state -->
-        <div class="w-full text-center">
-          <div class="w-full py-8 px-5">
-            <img src={imgNotionPapers} alt="papers" class="w-[100px] mx-auto" />
+        {#if completedList.length <= 0}
+          <!-- empty state -->
+          <div class="w-full text-center">
+            <div class="w-full py-8 px-5">
+              <img
+                src={imgNotionPapers}
+                alt="papers"
+                class="w-[100px] mx-auto"
+              />
+            </div>
+            <p>No completed task yet.</p>
           </div>
-          <p>No completed task yet.</p>
-        </div>
-
-        <!-- <div class="flex gap-4 mt-4" /> -->
+        {:else}
+          <ul class="flex flex-col gap-2 mt-4">
+            {#each completedList as { id, name }}
+              <li class="flex gap-2">
+                <span class="block w-full py-2 px-3 border border-transparent">
+                  {name}
+                </span>
+                <button
+                  type="button"
+                  class="py-2 px-3 inline-block justify-center items-center gap-2 rounded-md border border-transparent font-semibold text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all text-sm"
+                  on:click={() => handleDelete(id)}
+                >
+                  <Trash />
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </div>
     </div>
   </div>
